@@ -1,25 +1,38 @@
-// src/pages/EmergencyContactsPage.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, Button, ListGroup, Alert } from 'react-bootstrap';
+import axios from 'axios';
 
 const EmergencyContactsPage = () => {
   const [contact, setContact] = useState({ name: '', phone: '' });
   const [contacts, setContacts] = useState([]);
   const [submitted, setSubmitted] = useState(false);
+  const userId = "user123"; // Replace with dynamic user ID logic later
+
+  // 1. Load contacts from backend on page load
+  useEffect(() => {
+    axios.get(`http://localhost:8080/api/contacts/${userId}`)
+      .then(response => setContacts(response.data))
+      .catch(error => console.error("Failed to fetch contacts", error));
+  }, [submitted]); // Refresh contacts after new add
 
   const handleChange = (e) => {
     setContact({ ...contact, [e.target.name]: e.target.value });
   };
 
+  // 2. Send contact to backend on submit
   const handleAddContact = (e) => {
     e.preventDefault();
     if (!contact.name || !contact.phone) return;
 
-    setContacts([...contacts, contact]);
-    // TODO: Save to backend securely with encryption
-    setContact({ name: '', phone: '' });
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+    const contactWithUserId = { ...contact, userId };
+
+    axios.post("http://localhost:8080/api/contacts", contactWithUserId)
+      .then(() => {
+        setSubmitted(true);
+        setContact({ name: '', phone: '' });
+        setTimeout(() => setSubmitted(false), 3000);
+      })
+      .catch(err => console.error("Failed to save contact", err));
   };
 
   return (
