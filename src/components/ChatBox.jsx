@@ -7,23 +7,35 @@ const ChatBox = () => {
     { from: 'bot', text: 'Hi there! I’m MindMitra. How are you feeling today?' },
   ]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
-    // Add user message
-    const newMessages = [...messages, { from: 'user', text: input }];
-    setMessages(newMessages);
-
-    // Simulate bot reply (we'll replace this with OpenAI API later)
-    setTimeout(() => {
-      setMessages(prev => [
-        ...prev,
-        { from: 'bot', text: "Thanks for sharing. I'm here to listen." },
-      ]);
-    }, 800);
-
+    const userMessage = { from: 'user', text: input };
+    setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8080/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      const data = await response.text();
+
+      const botMessage = { from: 'bot', text: data };
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error fetching AI reply:', error);
+      setMessages(prev => [...prev, { from: 'bot', text: 'Oops! Something went wrong.' }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -54,9 +66,10 @@ const ChatBox = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={loading}
           />
-          <Button variant="primary" onClick={handleSend} className="ms-2">
-            Send
+          <Button variant="primary" onClick={handleSend} className="ms-2" disabled={loading}>
+            {loading ? 'Sending...' : 'Send'}
           </Button>
         </Form.Group>
       </Form>
